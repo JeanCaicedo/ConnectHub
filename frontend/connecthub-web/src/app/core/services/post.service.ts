@@ -6,7 +6,7 @@ import { CreatePostRequest, Post } from '../models/models';
 @Injectable({ providedIn: 'root' })
 export class PostService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://localhost:7001/api/posts'; // ⚠️ Mismo puerto que el API
+  private apiUrl = 'https://localhost:7088/api/posts';
 
   getAll(): Observable<Post[]> {
     return this.http.get<Post[]>(this.apiUrl);

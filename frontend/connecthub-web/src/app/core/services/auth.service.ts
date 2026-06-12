@@ -6,7 +6,7 @@ import { AuthResponse, LoginRequest, RegisterRequest } from '../models/models';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://localhost:7001/api/auth'; // ⚠️ Cambia el puerto al que te dé dotnet run
+  private apiUrl = 'https://localhost:7088/api/auth';
 
   // Signal con el usuario actual (Angular 18 moderno)
   currentUser = signal<AuthResponse | null>(this.loadFromStorage());

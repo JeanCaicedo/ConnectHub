@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PostService } from '../../core/services/post.service';
@@ -8,7 +9,7 @@ import { Post } from '../../core/models/models';
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DatePipe],
   template: `
     <div class="feed-container">
       <header>
