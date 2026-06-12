@@ -13,7 +13,7 @@ import { Post } from '../../core/models/models';
   template: `
     <div class="feed-container">
       <header>
-        <h2>👋 Hola, {{ auth.currentUser()?.username }}</h2>
+        <h2>Hola, {{ auth.currentUser()?.username }}</h2>
         <button (click)="logout()">Cerrar sesión</button>
       </header>
 

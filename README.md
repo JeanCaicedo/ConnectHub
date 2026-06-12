@@ -1,22 +1,22 @@
-# ConnectHub 🌐
+# ConnectHub
 
 Mini red social tipo Twitter/Instagram construida con **.NET 8 + Angular 18 + SQL Server**.
 
 > Proyecto de aprendizaje full-stack desarrollado por fases, cada una añadiendo capacidades del stack.
 
-## ✨ Features (al terminar todas las fases)
+## Features (al terminar todas las fases)
 
-- 🔐 Autenticación JWT con BCrypt
-- 📝 Posts con texto e imágenes
-- ❤️ Likes y comentarios anidados
-- 👥 Sistema de seguidores y feed personalizado
-- 📷 Subida de imágenes
-- 🔔 Notificaciones en tiempo real (SignalR)
-- 💬 Mensajería directa
-- 📊 Dashboard con estadísticas (Chart.js)
-- 🏷️ Hashtags y búsqueda
+- Autenticación JWT con BCrypt
+- Posts con texto e imágenes
+- Likes y comentarios anidados
+- Sistema de seguidores y feed personalizado
+- Subida de imágenes
+- Notificaciones en tiempo real (SignalR)
+- Mensajería directa
+- Dashboard con estadísticas (Chart.js)
+- Hashtags y búsqueda
 
-## 🛠️ Stack
+## Stack
 
 | Capa | Tech |
 |------|------|
@@ -26,7 +26,7 @@ Mini red social tipo Twitter/Instagram construida con **.NET 8 + Angular 18 + SQ
 | Auth | JWT Bearer |
 | Tiempo real | SignalR |
 
-## 🚀 Quick Start
+## Quick Start
 
 Sigue la guía paso a paso: **[SETUP.md](./SETUP.md)**
 
@@ -44,7 +44,7 @@ ng serve
 Backend: `https://localhost:7XXX/swagger`
 Frontend: `http://localhost:4200`
 
-## 📅 Roadmap
+## Roadmap
 
 - [x] **Fase 1** — Fundamentos: auth JWT + CRUD posts
 - [ ] **Fase 2** — Interacciones: likes, comentarios, seguidores

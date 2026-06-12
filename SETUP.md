@@ -4,7 +4,7 @@ Esta guía es para la **primera vez** que armas el proyecto. Sigue los pasos en 
 
 ---
 
-## 📦 Pre-requisitos
+## Pre-requisitos
 
 ```bash
 dotnet --version    # 8.x.x
@@ -22,7 +22,7 @@ dotnet tool install --global dotnet-ef
 
 ---
 
-## 1️⃣ Backend
+## Backend
 
 ### a. Crear el proyecto
 
@@ -92,7 +92,7 @@ Mira el puerto HTTPS en la consola (algo como `https://localhost:7123`). Abre `h
 
 ---
 
-## 2️⃣ Frontend
+## Frontend
 
 ### a. Crear el proyecto Angular
 
@@ -129,7 +129,7 @@ src/app/
 └── app.routes.ts        ← (reemplaza)
 ```
 
-### d. ⚠️ Ajustar el puerto del API
+### d. Ajustar el puerto del API
 
 Edita los dos archivos y cambia el puerto al que te mostró `dotnet run`:
 
@@ -152,7 +152,7 @@ Abre `http://localhost:4200`:
 
 ---
 
-## ✅ Checklist final
+## Checklist final
 
 - [ ] `dotnet run` corre sin errores y muestra Swagger
 - [ ] Migración aplicada, BD `ConnectHubDb` existe en SSMS
@@ -164,7 +164,7 @@ Abre `http://localhost:4200`:
 
 ---
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 **"Cannot open server" al hacer `database update`**
 → Cadena de conexión mal. Verifica el nombre exacto del servidor en SSMS (esquina superior izquierda al conectar).
