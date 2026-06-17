@@ -24,9 +24,17 @@ export interface Post {
   userId: number;
   username: string;
   userAvatarUrl?: string;
+  likesCount: number;
+  isLikedByCurrentUser: boolean;
 }
 
 export interface CreatePostRequest {
   content: string;
   imageUrl?: string;
+}
+
+// Respuesta de los endpoints de like/unlike
+export interface LikeResponse {
+  liked: boolean;
+  likesCount: number;
 }

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreatePostRequest, Post } from '../models/models';
+import { CreatePostRequest, LikeResponse, Post } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class PostService {
@@ -22,5 +22,14 @@ export class PostService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  like(id: number): Observable<LikeResponse> {
+    // POST sin body: el backend identifica al usuario por el token
+    return this.http.post<LikeResponse>(`${this.apiUrl}/${id}/like`, {});
+  }
+
+  unlike(id: number): Observable<LikeResponse> {
+    return this.http.delete<LikeResponse>(`${this.apiUrl}/${id}/like`);
   }
 }

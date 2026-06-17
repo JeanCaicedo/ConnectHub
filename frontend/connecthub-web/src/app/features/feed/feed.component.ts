@@ -44,9 +44,18 @@ import { Post } from '../../core/models/models';
                 <span>{{ post.createdAt | date:'short' }}</span>
               </header>
               <p>{{ post.content }}</p>
-              @if (post.userId === auth.currentUser()?.userId) {
-                <button (click)="deletePost(post.id)">Eliminar</button>
-              }
+              <div class="post-actions">
+                <button
+                  class="like-btn"
+                  [class.liked]="post.isLikedByCurrentUser"
+                  (click)="toggleLike(post)"
+                >
+                  {{ post.isLikedByCurrentUser ? 'Te gusta' : 'Me gusta' }} ({{ post.likesCount }})
+                </button>
+                @if (post.userId === auth.currentUser()?.userId) {
+                  <button (click)="deletePost(post.id)">Eliminar</button>
+                }
+              </div>
             </article>
           }
         }
@@ -61,6 +70,9 @@ import { Post } from '../../core/models/models';
     .post { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
     .post header { margin-bottom: 0.5rem; font-size: 0.9rem; color: #666; }
     button { padding: 0.5rem 1rem; cursor: pointer; }
+    .post-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .like-btn { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
+    .like-btn.liked { background: #ffe3e3; border-color: #ff8787; color: #c92a2a; font-weight: 600; }
   `]
 })
 export class FeedComponent implements OnInit {
@@ -106,6 +118,41 @@ export class FeedComponent implements OnInit {
     this.postService.delete(id).subscribe({
       next: () => this.posts.update(curr => curr.filter(p => p.id !== id))
     });
+  }
+
+  toggleLike(post: Post) {
+    const wasLiked = post.isLikedByCurrentUser;
+    const prevCount = post.likesCount;
+
+    // Optimistic update: reflejamos el cambio en la UI antes de la respuesta
+    this.patchPost(post.id, {
+      isLikedByCurrentUser: !wasLiked,
+      likesCount: prevCount + (wasLiked ? -1 : 1)
+    });
+
+    const request = wasLiked
+      ? this.postService.unlike(post.id)
+      : this.postService.like(post.id);
+
+    request.subscribe({
+      // Sincronizamos con el contador real que devuelve el servidor
+      next: (res) => this.patchPost(post.id, {
+        isLikedByCurrentUser: res.liked,
+        likesCount: res.likesCount
+      }),
+      // Si falla, revertimos al estado anterior
+      error: () => this.patchPost(post.id, {
+        isLikedByCurrentUser: wasLiked,
+        likesCount: prevCount
+      })
+    });
+  }
+
+  // Actualiza un solo post dentro del signal sin mutar el resto
+  private patchPost(id: number, changes: Partial<Post>) {
+    this.posts.update(curr =>
+      curr.map(p => (p.id === id ? { ...p, ...changes } : p))
+    );
   }
 
   logout() {

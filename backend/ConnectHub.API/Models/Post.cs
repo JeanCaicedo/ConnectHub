@@ -20,4 +20,7 @@ public class Post
 
     // Navegación: cada post pertenece a un usuario
     public User User { get; set; } = null!;
+
+    // Navegación: un post puede recibir muchos likes
+    public ICollection<Like> Likes { get; set; } = new List<Like>();
 }

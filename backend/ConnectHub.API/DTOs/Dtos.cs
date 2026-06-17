@@ -53,4 +53,8 @@ public class PostDto
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? UserAvatarUrl { get; set; }
+
+    // Datos de interacción
+    public int LikesCount { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
 }

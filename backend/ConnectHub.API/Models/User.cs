@@ -28,4 +28,7 @@ public class User
 
     // Navegación: un usuario tiene muchos posts
     public ICollection<Post> Posts { get; set; } = new List<Post>();
+
+    // Navegación: un usuario puede dar muchos likes
+    public ICollection<Like> Likes { get; set; } = new List<Like>();
 }
