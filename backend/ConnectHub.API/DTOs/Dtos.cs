@@ -160,3 +160,13 @@ public class SearchResultDto
     public List<PostDto> Posts { get; set; } = new();
     public List<UserSummaryDto> Users { get; set; } = new();
 }
+
+// Envoltorio genérico de paginación (offset-based) para listas.
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int Total { get; set; }
+    public bool HasMore { get; set; }
+}

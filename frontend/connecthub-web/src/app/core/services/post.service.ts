@@ -1,20 +1,22 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreatePostRequest, LikeResponse, Post } from '../models/models';
+import { CreatePostRequest, LikeResponse, PagedResult, Post } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class PostService {
   private http = inject(HttpClient);
   private apiUrl = 'https://localhost:7088/api/posts';
 
-  getAll(): Observable<Post[]> {
-    return this.http.get<Post[]>(this.apiUrl);
+  getAll(page = 1, pageSize = 10): Observable<PagedResult<Post>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<Post>>(this.apiUrl, { params });
   }
 
   // Feed personalizado: solo posts de los usuarios que sigo
-  getFeed(): Observable<Post[]> {
-    return this.http.get<Post[]>(`${this.apiUrl}/feed`);
+  getFeed(page = 1, pageSize = 10): Observable<PagedResult<Post>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<Post>>(`${this.apiUrl}/feed`, { params });
   }
 
   getById(id: number): Observable<Post> {

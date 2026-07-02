@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PostService } from '../../core/services/post.service';
@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { Post } from '../../core/models/models';
 import { PostCardComponent } from '../../shared/post-card.component';
 import { NotificationsBellComponent } from '../../shared/notifications-bell.component';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-feed',
@@ -20,6 +21,9 @@ import { NotificationsBellComponent } from '../../shared/notifications-bell.comp
           <a routerLink="/search">Buscar</a>
           <a [routerLink]="['/profile', auth.currentUser()?.userId]">Mi perfil</a>
           <a routerLink="/dashboard">Dashboard</a>
+          <button class="theme-btn" (click)="theme.toggle()" aria-label="Cambiar tema">
+            {{ theme.theme() === 'dark' ? '☀️' : '🌙' }}
+          </button>
           <button (click)="logout()">Cerrar sesión</button>
         </nav>
       </header>
@@ -73,7 +77,11 @@ import { NotificationsBellComponent } from '../../shared/notifications-bell.comp
               (commentsCount)="onCommentsCount(post.id, $event)"
             />
           }
+          @if (loadingMore()) { <p class="loading-more">Cargando más...</p> }
         }
+
+        <!-- Centinela: cuando entra en viewport, cargamos la siguiente página -->
+        <div #sentinel></div>
       </section>
     </div>
   `,
@@ -88,19 +96,28 @@ import { NotificationsBellComponent } from '../../shared/notifications-bell.comp
     .feed-toggle { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     .feed-toggle button { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
     .feed-toggle button.active { background: #1971c2; color: #fff; border-color: #1971c2; }
+    .theme-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; }
+    .loading-more { text-align: center; color: var(--muted, #888); }
     .upload-row { margin: 0.5rem 0; }
     .preview { margin-top: 0.5rem; }
     .preview img { max-width: 200px; border-radius: 8px; display: block; }
     button.link { background: none; border: none; color: #c92a2a; cursor: pointer; padding: 0.25rem 0; }
   `]
 })
-export class FeedComponent implements OnInit {
+export class FeedComponent implements OnInit, AfterViewInit, OnDestroy {
   private postService = inject(PostService);
   private fb = inject(FormBuilder);
   auth = inject(AuthService);
+  theme = inject(ThemeService);
+
+  @ViewChild('sentinel') sentinel?: ElementRef<HTMLElement>;
+  private observer?: IntersectionObserver;
 
   posts = signal<Post[]>([]);
   loading = signal(true);
+  loadingMore = signal(false);
+  hasMore = signal(false);
+  page = signal(1);
   scope = signal<'global' | 'mine'>('global');
   selectedFile = signal<File | null>(null);
   previewUrl = signal<string | null>(null);
@@ -114,24 +131,61 @@ export class FeedComponent implements OnInit {
     this.loadPosts();
   }
 
+  ngAfterViewInit() {
+    // IntersectionObserver: dispara loadMore cuando el centinela se acerca al viewport.
+    this.observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) this.loadMore(); },
+      { rootMargin: '200px' }
+    );
+    if (this.sentinel) this.observer.observe(this.sentinel.nativeElement);
+  }
+
+  ngOnDestroy() {
+    this.observer?.disconnect();
+  }
+
   setScope(scope: 'global' | 'mine') {
     if (this.scope() === scope) return;
     this.scope.set(scope);
     this.loadPosts();
   }
 
+  // Carga (o recarga) desde la página 1.
   loadPosts() {
     this.loading.set(true);
-    const request = this.scope() === 'mine'
-      ? this.postService.getFeed()
-      : this.postService.getAll();
+    this.page.set(1);
+    this.fetch(1, data => {
+      this.posts.set(data.items);
+      this.loading.set(false);
+    });
+  }
 
-    request.subscribe({
+  // Carga la siguiente página y la añade al final (infinite scroll).
+  loadMore() {
+    if (!this.hasMore() || this.loadingMore() || this.loading()) return;
+    const next = this.page() + 1;
+    this.loadingMore.set(true);
+    this.fetch(next, data => {
+      this.posts.update(curr => [...curr, ...data.items]);
+      this.page.set(next);
+      this.loadingMore.set(false);
+    });
+  }
+
+  private fetch(page: number, done: (data: { items: Post[]; hasMore: boolean }) => void) {
+    const req = this.scope() === 'mine'
+      ? this.postService.getFeed(page)
+      : this.postService.getAll(page);
+
+    req.subscribe({
       next: (data) => {
-        this.posts.set(data);
-        this.loading.set(false);
+        this.hasMore.set(data.hasMore);
+        done(data);
       },
-      error: () => this.loading.set(false)
+      error: () => {
+        this.loading.set(false);
+        this.loadingMore.set(false);
+      }
     });
   }
 

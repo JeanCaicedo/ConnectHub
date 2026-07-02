@@ -26,16 +26,48 @@ public class PostsController : ControllerBase
         _notifications = notifications;
     }
 
-    // GET /api/posts -> público, todos los posts
+    // GET /api/posts?page=1&pageSize=10 -> público, paginado
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PostDto>>> GetAll()
+    public async Task<ActionResult<PagedResult<PostDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         // Si hay alguien logueado, lo usamos para marcar IsLikedByCurrentUser.
         // Si no (endpoint público), queda en 0 y nunca coincide con un UserId real.
         var currentUserId = GetCurrentUserIdOrZero();
 
-        var posts = await _db.Posts
-            .OrderByDescending(p => p.CreatedAt)
+        return Ok(await PagePosts(_db.Posts, page, pageSize, currentUserId));
+    }
+
+    // GET /api/posts/feed -> solo posts de los usuarios que sigo (requiere JWT).
+    // Se define ANTES que "{id:int}" y con segmento literal "feed" para que el router
+    // no lo confunda con un id.
+    [Authorize]
+    [HttpGet("feed")]
+    public async Task<ActionResult<PagedResult<PostDto>>> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var userId = GetUserId();
+
+        // IDs de los usuarios que sigo. Lo dejamos como IQueryable (subconsulta)
+        // para que el filtro se traduzca a un solo SQL con un IN (...).
+        var followedIds = _db.Follows
+            .Where(f => f.FollowerId == userId)
+            .Select(f => f.FollowedId);
+
+        var query = _db.Posts.Where(p => followedIds.Contains(p.UserId));
+        return Ok(await PagePosts(query, page, pageSize, userId));
+    }
+
+    // Aplica orden, paginación y proyección a DTO sobre cualquier consulta de posts.
+    private async Task<PagedResult<PostDto>> PagePosts(IQueryable<Post> query, int page, int pageSize, int currentUserId)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var ordered = query.OrderByDescending(p => p.CreatedAt);
+        var total = await ordered.CountAsync();
+
+        var items = await ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new PostDto
             {
                 Id = p.Id,
@@ -51,43 +83,14 @@ public class PostsController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(posts);
-    }
-
-    // GET /api/posts/feed -> solo posts de los usuarios que sigo (requiere JWT).
-    // Se define ANTES que "{id:int}" y con segmento literal "feed" para que el router
-    // no lo confunda con un id.
-    [Authorize]
-    [HttpGet("feed")]
-    public async Task<ActionResult<IEnumerable<PostDto>>> GetFeed()
-    {
-        var userId = GetUserId();
-
-        // IDs de los usuarios que sigo. Lo dejamos como IQueryable (subconsulta)
-        // para que el filtro se traduzca a un solo SQL con un IN (...).
-        var followedIds = _db.Follows
-            .Where(f => f.FollowerId == userId)
-            .Select(f => f.FollowedId);
-
-        var posts = await _db.Posts
-            .Where(p => followedIds.Contains(p.UserId))
-            .OrderByDescending(p => p.CreatedAt)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Content = p.Content,
-                ImageUrl = p.ImageUrl,
-                CreatedAt = p.CreatedAt,
-                UserId = p.UserId,
-                Username = p.User.Username,
-                UserAvatarUrl = p.User.AvatarUrl,
-                LikesCount = p.Likes.Count,
-                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == userId),
-                CommentsCount = p.Comments.Count
-            })
-            .ToListAsync();
-
-        return Ok(posts);
+        return new PagedResult<PostDto>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            Total = total,
+            HasMore = page * pageSize < total
+        };
     }
 
     // GET /api/posts/5
