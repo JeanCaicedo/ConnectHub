@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import { PostService } from '../../core/services/post.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Post } from '../../core/models/models';
+import { PostCommentsComponent } from './post-comments.component';
 
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, PostCommentsComponent],
   template: `
     <div class="feed-container">
       <header>
@@ -52,10 +53,20 @@ import { Post } from '../../core/models/models';
                 >
                   {{ post.isLikedByCurrentUser ? 'Te gusta' : 'Me gusta' }} ({{ post.likesCount }})
                 </button>
+                <button class="comment-btn" (click)="toggleComments(post.id)">
+                  Comentarios ({{ post.commentsCount }})
+                </button>
                 @if (post.userId === auth.currentUser()?.userId) {
                   <button (click)="deletePost(post.id)">Eliminar</button>
                 }
               </div>
+
+              @if (expanded().has(post.id)) {
+                <app-post-comments
+                  [postId]="post.id"
+                  (countChanged)="onCommentsCountChanged(post.id, $event)"
+                />
+              }
             </article>
           }
         }
@@ -73,6 +84,7 @@ import { Post } from '../../core/models/models';
     .post-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .like-btn { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
     .like-btn.liked { background: #ffe3e3; border-color: #ff8787; color: #c92a2a; font-weight: 600; }
+    .comment-btn { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
   `]
 })
 export class FeedComponent implements OnInit {
@@ -83,6 +95,8 @@ export class FeedComponent implements OnInit {
 
   posts = signal<Post[]>([]);
   loading = signal(true);
+  // IDs de posts con la seccion de comentarios abierta
+  expanded = signal<Set<number>>(new Set());
 
   form = this.fb.nonNullable.group({
     content: ['', [Validators.required, Validators.maxLength(1000)]]
@@ -146,6 +160,19 @@ export class FeedComponent implements OnInit {
         likesCount: prevCount
       })
     });
+  }
+
+  toggleComments(postId: number) {
+    this.expanded.update(set => {
+      const next = new Set(set);
+      next.has(postId) ? next.delete(postId) : next.add(postId);
+      return next;
+    });
+  }
+
+  // El hijo (PostCommentsComponent) nos avisa del nuevo conteo
+  onCommentsCountChanged(postId: number, count: number) {
+    this.patchPost(postId, { commentsCount: count });
   }
 
   // Actualiza un solo post dentro del signal sin mutar el resto

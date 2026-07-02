@@ -26,6 +26,23 @@ export interface Post {
   userAvatarUrl?: string;
   likesCount: number;
   isLikedByCurrentUser: boolean;
+  commentsCount: number;
+}
+
+export interface Comment {
+  id: number;
+  content: string;
+  createdAt: string;
+  userId: number;
+  username: string;
+  userAvatarUrl?: string;
+  parentCommentId?: number;
+  replies: Comment[];
+}
+
+export interface CreateCommentRequest {
+  content: string;
+  parentCommentId?: number;
 }
 
 export interface CreatePostRequest {

@@ -40,7 +40,8 @@ public class PostsController : ControllerBase
                 Username = p.User.Username,
                 UserAvatarUrl = p.User.AvatarUrl,
                 LikesCount = p.Likes.Count,
-                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == currentUserId)
+                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == currentUserId),
+                CommentsCount = p.Comments.Count
             })
             .ToListAsync();
 
@@ -65,7 +66,8 @@ public class PostsController : ControllerBase
                 Username = p.User.Username,
                 UserAvatarUrl = p.User.AvatarUrl,
                 LikesCount = p.Likes.Count,
-                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == currentUserId)
+                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == currentUserId),
+                CommentsCount = p.Comments.Count
             })
             .FirstOrDefaultAsync();
 
@@ -158,6 +160,99 @@ public class PostsController : ControllerBase
 
         var likesCount = await _db.Likes.CountAsync(l => l.PostId == id);
         return Ok(new { liked = false, likesCount });
+    }
+
+    // GET /api/posts/5/comments -> público. Comentarios raíz con sus respuestas anidadas.
+    [HttpGet("{id}/comments")]
+    public async Task<ActionResult<IEnumerable<CommentDto>>> GetComments(int id)
+    {
+        var postExists = await _db.Posts.AnyAsync(p => p.Id == id);
+        if (!postExists) return NotFound(new { message = "Post no encontrado" });
+
+        // Traemos solo los comentarios raíz (ParentCommentId == null) y, dentro de la
+        // misma proyección, sus respuestas. EF Core traduce esta proyección anidada a SQL.
+        var comments = await _db.Comments
+            .Where(c => c.PostId == id && c.ParentCommentId == null)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => new CommentDto
+            {
+                Id = c.Id,
+                Content = c.Content,
+                CreatedAt = c.CreatedAt,
+                UserId = c.UserId,
+                Username = c.User.Username,
+                UserAvatarUrl = c.User.AvatarUrl,
+                ParentCommentId = c.ParentCommentId,
+                Replies = c.Replies
+                    .OrderBy(r => r.CreatedAt)
+                    .Select(r => new CommentDto
+                    {
+                        Id = r.Id,
+                        Content = r.Content,
+                        CreatedAt = r.CreatedAt,
+                        UserId = r.UserId,
+                        Username = r.User.Username,
+                        UserAvatarUrl = r.User.AvatarUrl,
+                        ParentCommentId = r.ParentCommentId
+                    })
+                    .ToList()
+            })
+            .ToListAsync();
+
+        return Ok(comments);
+    }
+
+    // POST /api/posts/5/comments -> requiere JWT. Crea comentario raíz o respuesta.
+    [Authorize]
+    [HttpPost("{id}/comments")]
+    public async Task<ActionResult<CommentDto>> AddComment(int id, CreateCommentDto dto)
+    {
+        var userId = GetUserId();
+
+        var postExists = await _db.Posts.AnyAsync(p => p.Id == id);
+        if (!postExists) return NotFound(new { message = "Post no encontrado" });
+
+        int? parentId = dto.ParentCommentId;
+        if (parentId is not null)
+        {
+            // El padre debe existir y pertenecer a ESTE post (no vale responder
+            // a un comentario de otra publicación).
+            var parent = await _db.Comments
+                .FirstOrDefaultAsync(c => c.Id == parentId && c.PostId == id);
+            if (parent is null)
+                return BadRequest(new { message = "El comentario al que respondes no existe en este post" });
+
+            // Regla de 1 nivel: si respondes a una respuesta, aplanamos.
+            // La nueva respuesta cuelga del comentario raíz, no de la intermedia.
+            parentId = parent.ParentCommentId ?? parent.Id;
+        }
+
+        var comment = new Comment
+        {
+            Content = dto.Content,
+            PostId = id,
+            UserId = userId,
+            ParentCommentId = parentId
+        };
+
+        _db.Comments.Add(comment);
+        await _db.SaveChangesAsync();
+
+        // Cargamos el autor para poder devolver Username/Avatar en la respuesta.
+        await _db.Entry(comment).Reference(c => c.User).LoadAsync();
+
+        var result = new CommentDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            CreatedAt = comment.CreatedAt,
+            UserId = comment.UserId,
+            Username = comment.User.Username,
+            UserAvatarUrl = comment.User.AvatarUrl,
+            ParentCommentId = comment.ParentCommentId
+        };
+
+        return CreatedAtAction(nameof(GetComments), new { id }, result);
     }
 
     private int GetUserId()

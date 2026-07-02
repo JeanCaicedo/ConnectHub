@@ -10,6 +10,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
+    public DbSet<Comment> Comments => Set<Comment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +50,32 @@ public class ApplicationDbContext : DbContext
             .HasOne(l => l.User)
             .WithMany(u => u.Likes)
             .HasForeignKey(l => l.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Comment -> Post: al borrar un post se borran sus comentarios (cascada).
+        modelBuilder.Entity<Comment>()
+            .HasOne(c => c.Post)
+            .WithMany(p => p.Comments)
+            .HasForeignKey(c => c.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Comment -> User: Restrict. El comentario ya se borra vía el post;
+        // un segundo camino User -> Comment crearía "multiple cascade paths".
+        modelBuilder.Entity<Comment>()
+            .HasOne(c => c.User)
+            .WithMany(u => u.Comments)
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Comment -> Comment (auto-referencia): Restrict.
+        // Si fuese Cascade, borrar un post tendría dos rutas hacia una respuesta
+        // (Post -> Comment directo, y Post -> Comment raíz -> Comment respuesta),
+        // que es justo el "multiple cascade paths" que SQL Server prohíbe.
+        // Con Restrict, borramos las respuestas a mano en el controller.
+        modelBuilder.Entity<Comment>()
+            .HasOne(c => c.ParentComment)
+            .WithMany(c => c.Replies)
+            .HasForeignKey(c => c.ParentCommentId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

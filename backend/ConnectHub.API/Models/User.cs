@@ -31,4 +31,7 @@ public class User
 
     // Navegación: un usuario puede dar muchos likes
     public ICollection<Like> Likes { get; set; } = new List<Like>();
+
+    // Navegación: un usuario puede escribir muchos comentarios
+    public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 }

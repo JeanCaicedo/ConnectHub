@@ -23,4 +23,7 @@ public class Post
 
     // Navegación: un post puede recibir muchos likes
     public ICollection<Like> Likes { get; set; } = new List<Like>();
+
+    // Navegación: un post puede recibir muchos comentarios
+    public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 }
