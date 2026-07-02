@@ -1,7 +1,7 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
+using ConnectHub.API.Helpers;
 using ConnectHub.API.Models;
 using ConnectHub.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -336,14 +336,9 @@ public class PostsController : ControllerBase
 
     // Extrae #palabra del contenido y crea los vínculos Post <-> Hashtag,
     // reutilizando hashtags que ya existan (no duplica).
-    private static readonly Regex HashtagRegex = new(@"#(\w+)", RegexOptions.Compiled);
-
     private async Task SyncHashtagsAsync(Post post)
     {
-        var names = HashtagRegex.Matches(post.Content)
-            .Select(m => m.Groups[1].Value.ToLowerInvariant())
-            .Distinct()
-            .ToList();
+        var names = HashtagParser.Extract(post.Content);
 
         if (names.Count == 0) return;
 

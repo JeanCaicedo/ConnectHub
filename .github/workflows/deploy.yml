@@ -1,0 +1,57 @@
+# Despliegue a Azure. Se ejecuta manualmente (workflow_dispatch) hasta que
+# tengas los recursos y secrets configurados; entonces puedes cambiarlo a "on: push".
+#
+# Secrets requeridos en Settings > Secrets and variables > Actions:
+#   AZURE_WEBAPP_PUBLISH_PROFILE     -> perfil de publicacion del App Service (backend)
+#   AZURE_STATIC_WEB_APPS_API_TOKEN  -> token de despliegue del Static Web App (frontend)
+#
+# Variables a ajustar abajo:
+#   AZURE_WEBAPP_NAME -> el nombre de tu App Service
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: connecthub-api   # <-- CAMBIA por el nombre real de tu App Service
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  deploy-backend:
+    name: Deploy API to Azure App Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish
+        run: dotnet publish backend/ConnectHub.API/ConnectHub.API.csproj -c Release -o publish
+
+      # NOTA: aplica las migraciones a tu base de datos de produccion antes o despues
+      # del deploy (p. ej. con "dotnet ef database update" apuntando a la cadena de
+      # conexion de produccion, o generando un script SQL idempotente).
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: publish
+
+  deploy-frontend:
+    name: Deploy web to Azure Static Web Apps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: frontend/connecthub-web
+          output_location: dist/connecthub-web/browser
