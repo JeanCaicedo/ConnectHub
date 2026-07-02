@@ -16,11 +16,13 @@ public class PostsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly FileStorageService _files;
+    private readonly NotificationService _notifications;
 
-    public PostsController(ApplicationDbContext db, FileStorageService files)
+    public PostsController(ApplicationDbContext db, FileStorageService files, NotificationService notifications)
     {
         _db = db;
         _files = files;
+        _notifications = notifications;
     }
 
     // GET /api/posts -> público, todos los posts
@@ -171,14 +173,18 @@ public class PostsController : ControllerBase
     {
         var userId = GetUserId();
 
-        var postExists = await _db.Posts.AnyAsync(p => p.Id == id);
-        if (!postExists) return NotFound(new { message = "Post no encontrado" });
+        // Traemos el dueño del post (para notificarle) y de paso validamos que existe.
+        var ownerId = await _db.Posts.Where(p => p.Id == id)
+            .Select(p => (int?)p.UserId).FirstOrDefaultAsync();
+        if (ownerId is null) return NotFound(new { message = "Post no encontrado" });
 
         var alreadyLiked = await _db.Likes.AnyAsync(l => l.PostId == id && l.UserId == userId);
         if (alreadyLiked) return BadRequest(new { message = "Ya diste like a este post" });
 
         _db.Likes.Add(new Like { PostId = id, UserId = userId });
         await _db.SaveChangesAsync();
+
+        await _notifications.CreateAsync(ownerId.Value, userId, NotificationType.Like, id);
 
         var likesCount = await _db.Likes.CountAsync(l => l.PostId == id);
         return Ok(new { liked = true, likesCount });
@@ -265,10 +271,12 @@ public class PostsController : ControllerBase
     {
         var userId = GetUserId();
 
-        var postExists = await _db.Posts.AnyAsync(p => p.Id == id);
-        if (!postExists) return NotFound(new { message = "Post no encontrado" });
+        var ownerId = await _db.Posts.Where(p => p.Id == id)
+            .Select(p => (int?)p.UserId).FirstOrDefaultAsync();
+        if (ownerId is null) return NotFound(new { message = "Post no encontrado" });
 
         int? parentId = dto.ParentCommentId;
+        int? parentAuthorId = null;
         if (parentId is not null)
         {
             // El padre debe existir y pertenecer a ESTE post (no vale responder
@@ -277,6 +285,8 @@ public class PostsController : ControllerBase
                 .FirstOrDefaultAsync(c => c.Id == parentId && c.PostId == id);
             if (parent is null)
                 return BadRequest(new { message = "El comentario al que respondes no existe en este post" });
+
+            parentAuthorId = parent.UserId;
 
             // Regla de 1 nivel: si respondes a una respuesta, aplanamos.
             // La nueva respuesta cuelga del comentario raíz, no de la intermedia.
@@ -293,6 +303,12 @@ public class PostsController : ControllerBase
 
         _db.Comments.Add(comment);
         await _db.SaveChangesAsync();
+
+        // Notificamos al dueño del post. Si es una respuesta, también al autor
+        // del comentario padre (CreateAsync ignora el caso de notificarse a uno mismo).
+        await _notifications.CreateAsync(ownerId.Value, userId, NotificationType.Comment, id);
+        if (parentAuthorId is not null && parentAuthorId != ownerId)
+            await _notifications.CreateAsync(parentAuthorId.Value, userId, NotificationType.Comment, id);
 
         // Cargamos el autor para poder devolver Username/Avatar en la respuesta.
         await _db.Entry(comment).Reference(c => c.User).LoadAsync();

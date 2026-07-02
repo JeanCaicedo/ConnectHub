@@ -50,6 +50,10 @@ builder.Services.AddScoped<JwtHelper>();
 // Servicio de almacenamiento de archivos (subida de imágenes)
 builder.Services.AddScoped<ConnectHub.API.Services.FileStorageService>();
 
+// SignalR + servicio de notificaciones en tiempo real
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ConnectHub.API.Services.NotificationService>();
+
 // Autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key no configurado");
@@ -66,6 +70,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        // Los WebSocket no envían el header Authorization, así que SignalR manda el
+        // token por query string (?access_token=...). Aquí lo leemos para el hub.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -104,5 +124,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ConnectHub.API.Hubs.NotificationHub>("/hubs/notifications");
 
 app.Run();

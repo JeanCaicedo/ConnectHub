@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Like> Likes => Set<Like>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Follow> Follows => Set<Follow>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,5 +99,33 @@ public class ApplicationDbContext : DbContext
             .WithMany(u => u.Followers)
             .HasForeignKey(f => f.FollowedId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Guardamos el enum como texto ("Like"/"Comment"/"Follow") en vez de 0/1/2:
+        // más legible al inspeccionar la BD y robusto si se reordena el enum.
+        modelBuilder.Entity<Notification>()
+            .Property(n => n.Type)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        // Notification -> User (destinatario) y -> FromUser (autor): ambos Restrict.
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.FromUser)
+            .WithMany()
+            .HasForeignKey(n => n.FromUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Notification -> Post: al borrar el post, la notificación queda con PostId nulo
+        // (no la borramos, pero pierde la referencia). PostId es nullable para permitirlo.
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.Post)
+            .WithMany()
+            .HasForeignKey(n => n.PostId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -16,11 +16,13 @@ public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly FileStorageService _files;
+    private readonly NotificationService _notifications;
 
-    public UsersController(ApplicationDbContext db, FileStorageService files)
+    public UsersController(ApplicationDbContext db, FileStorageService files, NotificationService notifications)
     {
         _db = db;
         _files = files;
+        _notifications = notifications;
     }
 
     // GET /api/users/5 -> perfil público con contadores
@@ -95,6 +97,8 @@ public class UsersController : ControllerBase
 
         _db.Follows.Add(new Follow { FollowerId = userId, FollowedId = id });
         await _db.SaveChangesAsync();
+
+        await _notifications.CreateAsync(id, userId, NotificationType.Follow, null);
 
         var followersCount = await _db.Follows.CountAsync(f => f.FollowedId == id);
         return Ok(new { following = true, followersCount });

@@ -5,16 +5,18 @@ import { PostService } from '../../core/services/post.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Post } from '../../core/models/models';
 import { PostCardComponent } from '../../shared/post-card.component';
+import { NotificationsBellComponent } from '../../shared/notifications-bell.component';
 
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, PostCardComponent],
+  imports: [ReactiveFormsModule, RouterLink, PostCardComponent, NotificationsBellComponent],
   template: `
     <div class="feed-container">
       <header class="top-bar">
         <h2>Hola, {{ auth.currentUser()?.username }}</h2>
         <nav>
+          <app-notifications-bell />
           <a [routerLink]="['/profile', auth.currentUser()?.userId]">Mi perfil</a>
           <a routerLink="/dashboard">Dashboard</a>
           <button (click)="logout()">Cerrar sesión</button>

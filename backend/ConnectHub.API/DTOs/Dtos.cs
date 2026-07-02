@@ -109,3 +109,15 @@ public class UpdateProfileDto
     [MaxLength(500)]
     public string? Bio { get; set; }
 }
+
+public class NotificationDto
+{
+    public int Id { get; set; }
+    public string Type { get; set; } = string.Empty;   // "Like" | "Comment" | "Follow"
+    public int FromUserId { get; set; }
+    public string FromUsername { get; set; } = string.Empty;
+    public string? FromUserAvatarUrl { get; set; }
+    public int? PostId { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

@@ -73,3 +73,16 @@ export interface FollowResponse {
   following: boolean;
   followersCount: number;
 }
+
+export type NotificationType = 'Like' | 'Comment' | 'Follow';
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  fromUserId: number;
+  fromUsername: string;
+  fromUserAvatarUrl?: string;
+  postId?: number;
+  isRead: boolean;
+  createdAt: string;
+}
