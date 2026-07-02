@@ -106,3 +106,15 @@ export interface Engagement {
   followersCount: number;
   engagementRate: number;
 }
+
+export interface UserSummary {
+  id: number;
+  username: string;
+  avatarUrl?: string;
+  bio?: string;
+}
+
+export interface SearchResult {
+  posts: Post[];
+  users: UserSummary[];
+}

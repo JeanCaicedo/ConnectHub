@@ -17,6 +17,7 @@ import { NotificationsBellComponent } from '../../shared/notifications-bell.comp
         <h2>Hola, {{ auth.currentUser()?.username }}</h2>
         <nav>
           <app-notifications-bell />
+          <a routerLink="/search">Buscar</a>
           <a [routerLink]="['/profile', auth.currentUser()?.userId]">Mi perfil</a>
           <a routerLink="/dashboard">Dashboard</a>
           <button (click)="logout()">Cerrar sesión</button>

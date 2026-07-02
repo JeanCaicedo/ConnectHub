@@ -19,7 +19,15 @@ import { PostCommentsComponent } from '../features/feed/post-comments.component'
         <span>{{ post().createdAt | date:'short' }}</span>
       </header>
 
-      <p>{{ post().content }}</p>
+      <p class="content">
+        @for (seg of segments(post().content); track $index) {
+          @if (seg.tag) {
+            <a [routerLink]="['/search']" [queryParams]="{ q: '#' + seg.text }">#{{ seg.text }}</a>
+          } @else {
+            <span>{{ seg.text }}</span>
+          }
+        }
+      </p>
 
       @if (post().imageUrl) {
         <img class="post-image" [src]="imageSrc(post().imageUrl!)" alt="imagen del post" />
@@ -55,6 +63,8 @@ import { PostCommentsComponent } from '../features/feed/post-comments.component'
     .author { color: #1971c2; text-decoration: none; font-weight: 600; }
     .author:hover { text-decoration: underline; }
     .post-image { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+    .content a { color: #1971c2; text-decoration: none; }
+    .content a:hover { text-decoration: underline; }
     .post-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     button { padding: 0.5rem 1rem; cursor: pointer; }
     .like-btn, .comment-btn { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
@@ -77,6 +87,16 @@ export class PostCardComponent {
   private apiHost = 'https://localhost:7088';
   imageSrc(url: string): string {
     return url.startsWith('http') ? url : `${this.apiHost}${url}`;
+  }
+
+  // Divide el contenido en segmentos de texto y de #hashtag para poder
+  // renderizar los hashtags como enlaces a la búsqueda.
+  segments(content: string): { text: string; tag: boolean }[] {
+    return content.split(/(#\w+)/g)
+      .filter(part => part.length > 0)
+      .map(part => part.startsWith('#')
+        ? { text: part.slice(1), tag: true }
+        : { text: part, tag: false });
   }
 
   toggleLike() {

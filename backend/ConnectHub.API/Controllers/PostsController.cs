@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
 using ConnectHub.API.Models;
@@ -132,6 +133,9 @@ public class PostsController : ControllerBase
 
         _db.Posts.Add(post);
         await _db.SaveChangesAsync();
+
+        // Extraemos los #hashtags del contenido y los vinculamos al post.
+        await SyncHashtagsAsync(post);
 
         // Cargamos el user para la respuesta
         await _db.Entry(post).Reference(p => p.User).LoadAsync();
@@ -325,6 +329,39 @@ public class PostsController : ControllerBase
         };
 
         return CreatedAtAction(nameof(GetComments), new { id }, result);
+    }
+
+    // Extrae #palabra del contenido y crea los vínculos Post <-> Hashtag,
+    // reutilizando hashtags que ya existan (no duplica).
+    private static readonly Regex HashtagRegex = new(@"#(\w+)", RegexOptions.Compiled);
+
+    private async Task SyncHashtagsAsync(Post post)
+    {
+        var names = HashtagRegex.Matches(post.Content)
+            .Select(m => m.Groups[1].Value.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (names.Count == 0) return;
+
+        var existing = await _db.Hashtags.Where(h => names.Contains(h.Name)).ToListAsync();
+        var existingNames = existing.Select(h => h.Name).ToHashSet();
+
+        var toCreate = names
+            .Where(n => !existingNames.Contains(n))
+            .Select(n => new Hashtag { Name = n })
+            .ToList();
+
+        if (toCreate.Count > 0)
+        {
+            _db.Hashtags.AddRange(toCreate);
+            await _db.SaveChangesAsync();
+        }
+
+        foreach (var hashtag in existing.Concat(toCreate))
+            _db.PostHashtags.Add(new PostHashtag { PostId = post.Id, HashtagId = hashtag.Id });
+
+        await _db.SaveChangesAsync();
     }
 
     private int GetUserId()

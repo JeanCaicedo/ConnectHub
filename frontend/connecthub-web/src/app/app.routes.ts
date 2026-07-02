@@ -26,5 +26,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'search',
+    loadComponent: () => import('./features/search/search.component').then(m => m.SearchComponent),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: 'feed' }
 ];

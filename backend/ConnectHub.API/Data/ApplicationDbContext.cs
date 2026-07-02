@@ -13,6 +13,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Hashtag> Hashtags => Set<Hashtag>();
+    public DbSet<PostHashtag> PostHashtags => Set<PostHashtag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,5 +129,28 @@ public class ApplicationDbContext : DbContext
             .WithMany()
             .HasForeignKey(n => n.PostId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Hashtag.Name único (no duplicamos "#dotnet").
+        modelBuilder.Entity<Hashtag>()
+            .HasIndex(h => h.Name)
+            .IsUnique();
+
+        // Tabla pivote PostHashtag: clave compuesta (PostId, HashtagId).
+        modelBuilder.Entity<PostHashtag>()
+            .HasKey(ph => new { ph.PostId, ph.HashtagId });
+
+        // Al borrar un post se borran sus vínculos con hashtags (cascada).
+        modelBuilder.Entity<PostHashtag>()
+            .HasOne(ph => ph.Post)
+            .WithMany(p => p.PostHashtags)
+            .HasForeignKey(ph => ph.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Vínculo -> Hashtag: Restrict, para no borrar el hashtag (puede usarlo otro post).
+        modelBuilder.Entity<PostHashtag>()
+            .HasOne(ph => ph.Hashtag)
+            .WithMany(h => h.PostHashtags)
+            .HasForeignKey(ph => ph.HashtagId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

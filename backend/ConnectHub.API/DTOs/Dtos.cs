@@ -146,3 +146,17 @@ public class EngagementDto
     // Interacciones promedio por post: (likes + comentarios) / posts.
     public double EngagementRate { get; set; }
 }
+
+public class UserSummaryDto
+{
+    public int Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+    public string? Bio { get; set; }
+}
+
+public class SearchResultDto
+{
+    public List<PostDto> Posts { get; set; } = new();
+    public List<UserSummaryDto> Users { get; set; } = new();
+}

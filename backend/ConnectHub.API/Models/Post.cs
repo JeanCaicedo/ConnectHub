@@ -26,4 +26,7 @@ public class Post
 
     // Navegación: un post puede recibir muchos comentarios
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+    // Navegación: hashtags del post (vía tabla pivote)
+    public ICollection<PostHashtag> PostHashtags { get; set; } = new List<PostHashtag>();
 }
