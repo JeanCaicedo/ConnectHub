@@ -32,3 +32,10 @@ appsettings.Development.json
 appsettings.Local.json
 .env
 .env.local
+
+# Imagenes subidas por usuarios (no versionar el contenido, si las carpetas)
+backend/ConnectHub.API/wwwroot/uploads/**
+!backend/ConnectHub.API/wwwroot/uploads/
+!backend/ConnectHub.API/wwwroot/uploads/posts/
+!backend/ConnectHub.API/wwwroot/uploads/avatars/
+!**/.gitkeep

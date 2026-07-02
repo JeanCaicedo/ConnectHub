@@ -103,3 +103,9 @@ public class UserProfileDto
     // ¿El usuario autenticado ya sigue a este perfil?
     public bool IsFollowedByCurrentUser { get; set; }
 }
+
+public class UpdateProfileDto
+{
+    [MaxLength(500)]
+    public string? Bio { get; set; }
+}

@@ -22,10 +22,17 @@ import { PostCardComponent } from '../../shared/post-card.component';
 
       @if (!loading() && profile(); as p) {
         <header class="profile-head">
-          <div>
-            <h2>{{ '@' + p.username }}</h2>
-            @if (p.bio) { <p class="bio">{{ p.bio }}</p> }
-            <p class="joined">Se unió el {{ p.createdAt | date:'longDate' }}</p>
+          <div class="identity">
+            @if (p.avatarUrl) {
+              <img class="avatar" [src]="imageSrc(p.avatarUrl)" alt="avatar" />
+            } @else {
+              <div class="avatar placeholder">{{ p.username.charAt(0).toUpperCase() }}</div>
+            }
+            <div>
+              <h2>{{ '@' + p.username }}</h2>
+              @if (p.bio) { <p class="bio">{{ p.bio }}</p> }
+              <p class="joined">Se unió el {{ p.createdAt | date:'longDate' }}</p>
+            </div>
           </div>
 
           @if (!isOwnProfile()) {
@@ -38,6 +45,19 @@ import { PostCardComponent } from '../../shared/post-card.component';
             </button>
           }
         </header>
+
+        @if (isOwnProfile()) {
+          <div class="edit-box">
+            <label class="avatar-upload">
+              Cambiar avatar
+              <input type="file" accept="image/*" (change)="onAvatarSelected($event)" hidden />
+            </label>
+            <div class="bio-edit">
+              <input [value]="p.bio ?? ''" #bioInput placeholder="Escribe tu bio..." maxlength="500" />
+              <button (click)="saveBio(bioInput.value)">Guardar bio</button>
+            </div>
+          </div>
+        }
 
         <div class="stats">
           <span><strong>{{ p.postsCount }}</strong> posts</span>
@@ -61,8 +81,15 @@ import { PostCardComponent } from '../../shared/post-card.component';
     .profile-container { max-width: 600px; margin: 2rem auto; padding: 1rem; }
     .back { color: #1971c2; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
     .profile-head { display: flex; justify-content: space-between; align-items: flex-start; }
+    .identity { display: flex; gap: 1rem; align-items: center; }
+    .avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+    .avatar.placeholder { display: flex; align-items: center; justify-content: center; background: #1971c2; color: #fff; font-size: 1.5rem; font-weight: 600; }
     .bio { margin: 0.3rem 0; }
     .joined { color: #888; font-size: 0.85rem; }
+    .edit-box { display: flex; gap: 1rem; align-items: center; margin: 1rem 0; flex-wrap: wrap; }
+    .avatar-upload { color: #1971c2; cursor: pointer; text-decoration: underline; }
+    .bio-edit { display: flex; gap: 0.5rem; flex: 1; }
+    .bio-edit input { flex: 1; padding: 0.4rem; }
     .stats { display: flex; gap: 1.5rem; margin: 1rem 0; padding: 0.75rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
     .follow-btn { padding: 0.5rem 1.25rem; cursor: pointer; border: 1px solid #1971c2; background: #1971c2; color: #fff; border-radius: 6px; }
     .follow-btn.following { background: #fff; color: #1971c2; }
@@ -137,5 +164,27 @@ export class ProfileComponent implements OnInit {
 
   onDeleted(id: number) {
     this.posts.update(curr => curr.filter(p => p.id !== id));
+  }
+
+  private apiHost = 'https://localhost:7088';
+  imageSrc(url: string): string {
+    return url.startsWith('http') ? url : `${this.apiHost}${url}`;
+  }
+
+  onAvatarSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.userService.uploadAvatar(file).subscribe({
+      next: (res) => this.profile.update(curr =>
+        curr ? { ...curr, avatarUrl: res.avatarUrl } : curr)
+    });
+  }
+
+  saveBio(bio: string) {
+    this.userService.updateBio(bio).subscribe({
+      next: () => this.profile.update(curr => curr ? { ...curr, bio } : curr)
+    });
   }
 }

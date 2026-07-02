@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
 using ConnectHub.API.Models;
+using ConnectHub.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,12 @@ namespace ConnectHub.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly FileStorageService _files;
 
-    public UsersController(ApplicationDbContext db)
+    public UsersController(ApplicationDbContext db, FileStorageService files)
     {
         _db = db;
+        _files = files;
     }
 
     // GET /api/users/5 -> perfil público con contadores
@@ -112,6 +115,43 @@ public class UsersController : ControllerBase
 
         var followersCount = await _db.Follows.CountAsync(f => f.FollowedId == id);
         return Ok(new { following = false, followersCount });
+    }
+
+    // PUT /api/users/me -> actualizar mi bio (requiere JWT)
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<ActionResult<UserProfileDto>> UpdateMe(UpdateProfileDto dto)
+    {
+        var userId = GetUserId();
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound();
+
+        user.Bio = dto.Bio;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { user.Id, user.Username, user.Bio, user.AvatarUrl });
+    }
+
+    // POST /api/users/me/avatar -> subir foto de perfil (requiere JWT)
+    [Authorize]
+    [HttpPost("me/avatar")]
+    public async Task<IActionResult> UploadAvatar(IFormFile file)
+    {
+        var userId = GetUserId();
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound();
+
+        try
+        {
+            var url = await _files.SaveImageAsync(file, "avatars");
+            user.AvatarUrl = url;
+            await _db.SaveChangesAsync();
+            return Ok(new { avatarUrl = url });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     private int GetUserId()

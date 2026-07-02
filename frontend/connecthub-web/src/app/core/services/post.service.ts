@@ -25,6 +25,14 @@ export class PostService {
     return this.http.post<Post>(this.apiUrl, post);
   }
 
+  // Sube una imagen (multipart/form-data) y devuelve su URL relativa.
+  // El campo debe llamarse 'file' para enlazar con el IFormFile del backend.
+  uploadImage(file: File): Observable<{ url: string }> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<{ url: string }>(`${this.apiUrl}/upload-image`, fd);
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }

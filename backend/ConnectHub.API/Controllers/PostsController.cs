@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
 using ConnectHub.API.Models;
+using ConnectHub.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,12 @@ namespace ConnectHub.API.Controllers;
 public class PostsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly FileStorageService _files;
 
-    public PostsController(ApplicationDbContext db)
+    public PostsController(ApplicationDbContext db, FileStorageService files)
     {
         _db = db;
+        _files = files;
     }
 
     // GET /api/posts -> público, todos los posts
@@ -196,6 +199,23 @@ public class PostsController : ControllerBase
 
         var likesCount = await _db.Likes.CountAsync(l => l.PostId == id);
         return Ok(new { liked = false, likesCount });
+    }
+
+    // POST /api/posts/upload-image -> sube una imagen y devuelve su URL (requiere JWT).
+    // El flujo del cliente: primero sube la imagen aquí, luego crea el post con esa URL.
+    [Authorize]
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage(IFormFile file)
+    {
+        try
+        {
+            var url = await _files.SaveImageAsync(file, "posts");
+            return Ok(new { url });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // GET /api/posts/5/comments -> público. Comentarios raíz con sus respuestas anidadas.

@@ -29,7 +29,20 @@ import { PostCardComponent } from '../../shared/post-card.component';
             placeholder="¿Qué estás pensando?"
             rows="3"
           ></textarea>
-          <button type="submit" [disabled]="form.invalid">Publicar</button>
+
+          <div class="upload-row">
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+            @if (previewUrl()) {
+              <div class="preview">
+                <img [src]="previewUrl()!" alt="preview" />
+                <button type="button" class="link" (click)="clearImage()">Quitar</button>
+              </div>
+            }
+          </div>
+
+          <button type="submit" [disabled]="form.invalid || publishing()">
+            {{ publishing() ? 'Publicando...' : 'Publicar' }}
+          </button>
         </form>
       </section>
 
@@ -72,6 +85,10 @@ import { PostCardComponent } from '../../shared/post-card.component';
     .feed-toggle { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     .feed-toggle button { border: 1px solid #ccc; background: #fff; border-radius: 6px; }
     .feed-toggle button.active { background: #1971c2; color: #fff; border-color: #1971c2; }
+    .upload-row { margin: 0.5rem 0; }
+    .preview { margin-top: 0.5rem; }
+    .preview img { max-width: 200px; border-radius: 8px; display: block; }
+    button.link { background: none; border: none; color: #c92a2a; cursor: pointer; padding: 0.25rem 0; }
   `]
 })
 export class FeedComponent implements OnInit {
@@ -82,6 +99,9 @@ export class FeedComponent implements OnInit {
   posts = signal<Post[]>([]);
   loading = signal(true);
   scope = signal<'global' | 'mine'>('global');
+  selectedFile = signal<File | null>(null);
+  previewUrl = signal<string | null>(null);
+  publishing = signal(false);
 
   form = this.fb.nonNullable.group({
     content: ['', [Validators.required, Validators.maxLength(1000)]]
@@ -112,14 +132,44 @@ export class FeedComponent implements OnInit {
     });
   }
 
-  createPost() {
-    if (this.form.invalid) return;
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.selectedFile.set(file);
+    // Preview local con object URL (sin subir todavía al servidor).
+    this.previewUrl.set(file ? URL.createObjectURL(file) : null);
+  }
 
-    this.postService.create(this.form.getRawValue()).subscribe({
+  clearImage() {
+    this.selectedFile.set(null);
+    this.previewUrl.set(null);
+  }
+
+  createPost() {
+    if (this.form.invalid || this.publishing()) return;
+    this.publishing.set(true);
+
+    const file = this.selectedFile();
+    if (file) {
+      // Flujo en dos pasos: subir imagen -> crear post con la URL devuelta.
+      this.postService.uploadImage(file).subscribe({
+        next: (res) => this.submitPost(res.url),
+        error: () => this.publishing.set(false)
+      });
+    } else {
+      this.submitPost(undefined);
+    }
+  }
+
+  private submitPost(imageUrl?: string) {
+    this.postService.create({ ...this.form.getRawValue(), imageUrl }).subscribe({
       next: (newPost) => {
         this.posts.update(curr => [newPost, ...curr]);
         this.form.reset();
-      }
+        this.clearImage();
+        this.publishing.set(false);
+      },
+      error: () => this.publishing.set(false)
     });
   }
 

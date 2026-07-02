@@ -23,4 +23,15 @@ export class UserService {
   unfollow(id: number): Observable<FollowResponse> {
     return this.http.delete<FollowResponse>(`${this.apiUrl}/${id}/follow`);
   }
+
+  updateBio(bio: string): Observable<{ id: number; username: string; bio?: string; avatarUrl?: string }> {
+    return this.http.put<{ id: number; username: string; bio?: string; avatarUrl?: string }>(
+      `${this.apiUrl}/me`, { bio });
+  }
+
+  uploadAvatar(file: File): Observable<{ avatarUrl: string }> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<{ avatarUrl: string }>(`${this.apiUrl}/me/avatar`, fd);
+  }
 }

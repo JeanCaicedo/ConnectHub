@@ -47,6 +47,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // JWT helper
 builder.Services.AddScoped<JwtHelper>();
 
+// Servicio de almacenamiento de archivos (subida de imágenes)
+builder.Services.AddScoped<ConnectHub.API.Services.FileStorageService>();
+
 // Autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key no configurado");
@@ -91,6 +94,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Sirve los archivos de wwwroot (imágenes subidas en /uploads/...)
+app.UseStaticFiles();
 
 // IMPORTANTE: CORS antes de Authentication
 app.UseCors("AllowAngular");
