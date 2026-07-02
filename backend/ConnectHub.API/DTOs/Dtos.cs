@@ -87,3 +87,19 @@ public class CommentDto
     // Respuestas anidadas (solo se llenan en comentarios raíz).
     public List<CommentDto> Replies { get; set; } = new();
 }
+
+public class UserProfileDto
+{
+    public int Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? Bio { get; set; }
+    public string? AvatarUrl { get; set; }
+    public DateTime CreatedAt { get; set; }
+
+    public int PostsCount { get; set; }
+    public int FollowersCount { get; set; }
+    public int FollowingCount { get; set; }
+
+    // ¿El usuario autenticado ya sigue a este perfil?
+    public bool IsFollowedByCurrentUser { get; set; }
+}

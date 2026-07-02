@@ -12,6 +12,11 @@ export class PostService {
     return this.http.get<Post[]>(this.apiUrl);
   }
 
+  // Feed personalizado: solo posts de los usuarios que sigo
+  getFeed(): Observable<Post[]> {
+    return this.http.get<Post[]>(`${this.apiUrl}/feed`);
+  }
+
   getById(id: number): Observable<Post> {
     return this.http.get<Post>(`${this.apiUrl}/${id}`);
   }

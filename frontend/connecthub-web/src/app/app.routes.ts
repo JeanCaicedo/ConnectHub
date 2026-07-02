@@ -16,5 +16,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/feed/feed.component').then(m => m.FeedComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'profile/:id',
+    loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: 'feed' }
 ];

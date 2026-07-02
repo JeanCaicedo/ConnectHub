@@ -55,3 +55,21 @@ export interface LikeResponse {
   liked: boolean;
   likesCount: number;
 }
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  bio?: string;
+  avatarUrl?: string;
+  createdAt: string;
+  postsCount: number;
+  followersCount: number;
+  followingCount: number;
+  isFollowedByCurrentUser: boolean;
+}
+
+// Respuesta de los endpoints de follow/unfollow
+export interface FollowResponse {
+  following: boolean;
+  followersCount: number;
+}

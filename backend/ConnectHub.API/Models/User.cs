@@ -34,4 +34,10 @@ public class User
 
     // Navegación: un usuario puede escribir muchos comentarios
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+    // A quiénes sigo (registros Follow donde yo soy el Follower)
+    public ICollection<Follow> Following { get; set; } = new List<Follow>();
+
+    // Quiénes me siguen (registros Follow donde yo soy el Followed)
+    public ICollection<Follow> Followers { get; set; } = new List<Follow>();
 }

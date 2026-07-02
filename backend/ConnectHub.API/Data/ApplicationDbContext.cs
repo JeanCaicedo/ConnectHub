@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Follow> Follows => Set<Follow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -76,6 +77,26 @@ public class ApplicationDbContext : DbContext
             .HasOne(c => c.ParentComment)
             .WithMany(c => c.Replies)
             .HasForeignKey(c => c.ParentCommentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Follow: clave compuesta (FollowerId, FollowedId). Sin esto, EF no sabría
+        // cuál es la PK de una entidad sin propiedad "Id".
+        modelBuilder.Entity<Follow>()
+            .HasKey(f => new { f.FollowerId, f.FollowedId });
+
+        // Follow -> Follower (el que sigue). Restrict: si fuese Cascade, borrar un User
+        // tendría dos caminos hacia la misma fila Follow (vía Follower y vía Followed).
+        modelBuilder.Entity<Follow>()
+            .HasOne(f => f.Follower)
+            .WithMany(u => u.Following)
+            .HasForeignKey(f => f.FollowerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Follow -> Followed (el seguido). También Restrict, por el mismo motivo.
+        modelBuilder.Entity<Follow>()
+            .HasOne(f => f.Followed)
+            .WithMany(u => u.Followers)
+            .HasForeignKey(f => f.FollowedId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

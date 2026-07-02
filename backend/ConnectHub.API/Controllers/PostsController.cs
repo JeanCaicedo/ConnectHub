@@ -48,8 +48,44 @@ public class PostsController : ControllerBase
         return Ok(posts);
     }
 
+    // GET /api/posts/feed -> solo posts de los usuarios que sigo (requiere JWT).
+    // Se define ANTES que "{id:int}" y con segmento literal "feed" para que el router
+    // no lo confunda con un id.
+    [Authorize]
+    [HttpGet("feed")]
+    public async Task<ActionResult<IEnumerable<PostDto>>> GetFeed()
+    {
+        var userId = GetUserId();
+
+        // IDs de los usuarios que sigo. Lo dejamos como IQueryable (subconsulta)
+        // para que el filtro se traduzca a un solo SQL con un IN (...).
+        var followedIds = _db.Follows
+            .Where(f => f.FollowerId == userId)
+            .Select(f => f.FollowedId);
+
+        var posts = await _db.Posts
+            .Where(p => followedIds.Contains(p.UserId))
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Content = p.Content,
+                ImageUrl = p.ImageUrl,
+                CreatedAt = p.CreatedAt,
+                UserId = p.UserId,
+                Username = p.User.Username,
+                UserAvatarUrl = p.User.AvatarUrl,
+                LikesCount = p.Likes.Count,
+                IsLikedByCurrentUser = p.Likes.Any(l => l.UserId == userId),
+                CommentsCount = p.Comments.Count
+            })
+            .ToListAsync();
+
+        return Ok(posts);
+    }
+
     // GET /api/posts/5
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<PostDto>> GetById(int id)
     {
         var currentUserId = GetCurrentUserIdOrZero();
