@@ -121,3 +121,28 @@ public class NotificationDto
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+// Punto (fecha, valor) para gráficos de línea/barras.
+public class DailyCountDto
+{
+    public DateTime Date { get; set; }
+    public int Count { get; set; }
+}
+
+public class TopPostDto
+{
+    public int Id { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public int LikesCount { get; set; }
+    public int CommentsCount { get; set; }
+}
+
+public class EngagementDto
+{
+    public int PostsCount { get; set; }
+    public int LikesReceived { get; set; }
+    public int CommentsReceived { get; set; }
+    public int FollowersCount { get; set; }
+    // Interacciones promedio por post: (likes + comentarios) / posts.
+    public double EngagementRate { get; set; }
+}

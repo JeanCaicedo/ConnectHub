@@ -86,3 +86,23 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface TopPost {
+  id: number;
+  content: string;
+  likesCount: number;
+  commentsCount: number;
+}
+
+export interface Engagement {
+  postsCount: number;
+  likesReceived: number;
+  commentsReceived: number;
+  followersCount: number;
+  engagementRate: number;
+}
