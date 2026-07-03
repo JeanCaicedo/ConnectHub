@@ -1,99 +1,99 @@
 # ConnectHub
 
-ConnectHub is a full-stack social network built with ASP.NET Core 8, Angular 18 and SQL Server. It covers the flow of a real social app: authentication, posts with images, likes, nested comments, follows, a personalized feed, real-time notifications, an analytics dashboard, hashtags and search.
+ConnectHub es una mini red social full-stack construida con ASP.NET Core 8, Angular 18 y SQL Server. Cubre el flujo de una app social real: autenticación, posts con imágenes, likes, comentarios anidados, follows, feed personalizado, notificaciones en tiempo real, dashboard de estadísticas, hashtags y búsqueda.
 
-## Features
+## Características
 
-- JWT authentication (register and login) with BCrypt password hashing.
-- Posts with text and optional image, owner-only deletion.
-- Likes with per-user state and live counters (optimistic UI).
-- Nested comments (one reply level) with counters and thread deletion.
-- Follows with public user profiles and follower and following counts.
-- Personalized feed: global timeline or only the people you follow.
-- Image uploads for posts and avatars, plus editable bio.
-- Real-time notifications over SignalR for likes, comments and follows, with an unread badge, dropdown and live toast.
-- Analytics dashboard: posts per day, likes received, follower growth, top posts and engagement rate, rendered with charts.
-- Hashtags parsed automatically from post content, and search across posts, hashtags and users.
-- Pagination with infinite scroll on the feed.
-- Light and dark theme with persistence.
+- Autenticación JWT (registro e inicio de sesión) con hashing de contraseñas mediante BCrypt.
+- Posts con texto e imagen opcional, con borrado solo por el dueño.
+- Likes con estado por usuario y contadores en vivo (UI optimista).
+- Comentarios anidados (un nivel de respuesta) con contadores y borrado del hilo.
+- Follows con perfiles públicos y conteo de seguidores y seguidos.
+- Feed personalizado: timeline global o solo de las personas que sigues.
+- Subida de imágenes para posts y avatares, además de bio editable.
+- Notificaciones en tiempo real por SignalR para likes, comentarios y follows, con badge de no leídas, dropdown y toast en vivo.
+- Dashboard de estadísticas: posts por día, likes recibidos, crecimiento de seguidores, top posts y tasa de engagement, renderizados con gráficos.
+- Hashtags parseados automáticamente del contenido de los posts, y búsqueda sobre posts, hashtags y usuarios.
+- Paginación con infinite scroll en el feed.
+- Tema claro y oscuro con persistencia.
 
-## Tech stack
+## Stack tecnológico
 
-| Layer | Technology |
+| Capa | Tecnología |
 |-------|------------|
-| Frontend | Angular 18 (standalone components, signals, new control flow), TypeScript, ng2-charts, @microsoft/signalr |
+| Frontend | Angular 18 (standalone components, signals, nuevo control flow), TypeScript, ng2-charts, @microsoft/signalr |
 | Backend | ASP.NET Core Web API (.NET 8), Entity Framework Core 8 (Code First) |
-| Database | SQL Server |
+| Base de datos | SQL Server |
 | Auth | JWT Bearer, BCrypt |
-| Real-time | SignalR |
+| Tiempo real | SignalR |
 | Tests | xUnit (backend), Jasmine/Karma (frontend) |
 | CI/CD | GitHub Actions |
 
-## Architecture
+## Arquitectura
 
 ```
 backend/ConnectHub.API/
-  Controllers/   HTTP endpoints, no business logic
-  DTOs/          request and response contracts (entities are never exposed)
-  Models/        EF Core entities
-  Data/          ApplicationDbContext and Fluent API configuration
-  Services/      business logic (file storage, notifications)
-  Hubs/          SignalR hubs
-  Helpers/       utilities (JWT, hashtag parsing)
-  Migrations/    EF Core migrations
+  Controllers/   endpoints HTTP, sin lógica de negocio
+  DTOs/          contratos de request y response (las entidades nunca se exponen)
+  Models/        entidades EF Core
+  Data/          ApplicationDbContext y configuración Fluent API
+  Services/      lógica de negocio (almacenamiento de archivos, notificaciones)
+  Hubs/          hubs de SignalR
+  Helpers/       utilidades (JWT, parseo de hashtags)
+  Migrations/    migraciones de EF Core
 
 frontend/connecthub-web/src/app/
   core/          singletons: services, guards, interceptors, models
-  features/      feature areas: auth, feed, profile, dashboard, search
-  shared/        reusable components (post card, notifications bell)
+  features/      áreas funcionales: auth, feed, profile, dashboard, search
+  shared/        componentes reutilizables (post card, campana de notificaciones)
 ```
 
-The backend follows a layered approach: controllers stay thin and delegate to services and the DbContext, and every response is projected into a DTO so EF entities are never returned directly. The frontend uses standalone components with signals for local state and functional guards and interceptors.
+El backend sigue un enfoque por capas: los controllers se mantienen delgados y delegan en los services y el DbContext, y cada respuesta se proyecta a un DTO para no devolver nunca entidades EF directamente. El frontend usa standalone components con signals para el estado local, y guards e interceptors funcionales.
 
-## Data model
+## Modelo de datos
 
-Users, Posts, Likes, Comments (self-referencing for replies), Follows (composite key), Notifications, Hashtags and the PostHashtags join table.
+Users, Posts, Likes, Comments (auto-referencial para las respuestas), Follows (clave compuesta), Notifications, Hashtags y la tabla intermedia PostHashtags.
 
-## API overview
+## Resumen del API
 
-| Method | Route | Auth | Description |
+| Método | Ruta | Auth | Descripción |
 |--------|-------|------|-------------|
-| POST | `/api/auth/register` | no | Create account, returns JWT |
-| POST | `/api/auth/login` | no | Log in, returns JWT |
-| GET | `/api/posts` | no | Paginated global feed |
-| GET | `/api/posts/feed` | yes | Posts from people you follow |
-| POST | `/api/posts` | yes | Create a post |
-| DELETE | `/api/posts/{id}` | yes | Delete own post |
-| POST | `/api/posts/upload-image` | yes | Upload a post image |
-| POST/DELETE | `/api/posts/{id}/like` | yes | Toggle like |
-| GET/POST | `/api/posts/{id}/comments` | mixed | List or add comments |
-| DELETE | `/api/comments/{id}` | yes | Delete own comment |
-| GET | `/api/users/{id}` | no | Public profile |
-| POST/DELETE | `/api/users/{id}/follow` | yes | Follow or unfollow |
-| POST | `/api/users/me/avatar` | yes | Upload avatar |
-| PUT | `/api/users/me` | yes | Update bio |
-| GET | `/api/notifications` | yes | My notifications |
-| GET | `/api/me/stats/*` | yes | Dashboard statistics |
-| GET | `/api/search?q=` | no | Search posts and users |
+| POST | `/api/auth/register` | no | Crea cuenta, devuelve JWT |
+| POST | `/api/auth/login` | no | Inicia sesión, devuelve JWT |
+| GET | `/api/posts` | no | Feed global paginado |
+| GET | `/api/posts/feed` | sí | Posts de las personas que sigues |
+| POST | `/api/posts` | sí | Crea un post |
+| DELETE | `/api/posts/{id}` | sí | Borra un post propio |
+| POST | `/api/posts/upload-image` | sí | Sube una imagen de post |
+| POST/DELETE | `/api/posts/{id}/like` | sí | Alterna el like |
+| GET/POST | `/api/posts/{id}/comments` | mixto | Lista o agrega comentarios |
+| DELETE | `/api/comments/{id}` | sí | Borra un comentario propio |
+| GET | `/api/users/{id}` | no | Perfil público |
+| POST/DELETE | `/api/users/{id}/follow` | sí | Sigue o deja de seguir |
+| POST | `/api/users/me/avatar` | sí | Sube el avatar |
+| PUT | `/api/users/me` | sí | Actualiza la bio |
+| GET | `/api/notifications` | sí | Mis notificaciones |
+| GET | `/api/me/stats/*` | sí | Estadísticas del dashboard |
+| GET | `/api/search?q=` | no | Busca posts y usuarios |
 
-Authentication uses `Authorization: Bearer <jwt>`. The SignalR hub is served at `/hubs/notifications`.
+La autenticación usa `Authorization: Bearer <jwt>`. El hub de SignalR se sirve en `/hubs/notifications`.
 
-## Getting started
+## Puesta en marcha
 
-Prerequisites: .NET 8 SDK, Node.js 20+, SQL Server (Express is fine). See [SETUP.md](./SETUP.md) for the detailed walkthrough.
+Requisitos previos: SDK de .NET 8, Node.js 20+, SQL Server (Express sirve). Ver [SETUP.md](./SETUP.md) para la guía detallada.
 
 ```bash
 # Backend
 cd backend/ConnectHub.API
 dotnet ef database update
 dotnet run
-# API on https://localhost:7088  (Swagger at /swagger)
+# API en https://localhost:7088  (Swagger en /swagger)
 
-# Frontend (new terminal)
+# Frontend (nueva terminal)
 cd frontend/connecthub-web
 npm install
 npm start
-# App on http://localhost:4200
+# App en http://localhost:4200
 ```
 
 ## Tests
@@ -107,8 +107,8 @@ cd frontend/connecthub-web
 npm test
 ```
 
-## Continuous integration and deployment
+## Integración continua y despliegue
 
-`.github/workflows/ci.yml` builds and tests both the backend and the frontend on every push and pull request to `main`.
+`.github/workflows/ci.yml` compila y testea backend y frontend en cada push y pull request a `main`.
 
-`.github/workflows/deploy.yml` deploys the API to Azure App Service and the web app to Azure Static Web Apps. It runs manually and expects two secrets, `AZURE_WEBAPP_PUBLISH_PROFILE` and `AZURE_STATIC_WEB_APPS_API_TOKEN`, plus the App Service name set in the workflow.
+`.github/workflows/deploy.yml` despliega el API en Azure App Service y la web en Azure Static Web Apps. Se ejecuta manualmente y espera dos secretos, `AZURE_WEBAPP_PUBLISH_PROFILE` y `AZURE_STATIC_WEB_APPS_API_TOKEN`, además del nombre del App Service definido en el workflow.
