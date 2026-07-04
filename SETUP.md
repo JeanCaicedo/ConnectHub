@@ -68,7 +68,18 @@ Abre `appsettings.json` y ajusta `DefaultConnection`:
 | LocalDB | `Server=(localdb)\\MSSQLLocalDB;Database=ConnectHubDb;Trusted_Connection=True` |
 | SQL Server con user/pwd | `Server=localhost;Database=ConnectHubDb;User Id=sa;Password=TuPwd;TrustServerCertificate=True` |
 
-### e. Crear la base de datos
+### e. Configurar la clave JWT (User Secrets)
+
+La clave con la que se firman los tokens **no** vive en `appsettings.json` (ese archivo se commitea a git). En desarrollo se guarda con **User Secrets** de .NET, fuera del repo:
+
+```bash
+# desde backend/ConnectHub.API/
+dotnet user-secrets set "Jwt:Key" "una-clave-secreta-de-al-menos-32-caracteres"
+```
+
+Los secretos quedan en tu perfil de usuario (`%APPDATA%\Microsoft\UserSecrets\`) y la configuración de .NET los carga automáticamente cuando el entorno es Development. En producción la clave se pasa por la variable de entorno `Jwt__Key`. Si te falta este paso, la app no arranca y el error te dice exactamente qué comando correr.
+
+### f. Crear la base de datos
 
 ```bash
 dotnet ef migrations add InitialCreate
@@ -77,7 +88,7 @@ dotnet ef database update
 
 Verifica en SSMS que se creó `ConnectHubDb` con tablas `Users` y `Posts`.
 
-### f. Correr
+### g. Correr
 
 ```bash
 dotnet run
@@ -131,10 +142,12 @@ src/app/
 
 ### d. Ajustar el puerto del API
 
-Edita los dos archivos y cambia el puerto al que te mostró `dotnet run`:
+El host del API está centralizado en los archivos de entorno. Si tu `dotnet run` muestra un puerto distinto de `7088`, edita:
 
-- `src/app/core/services/auth.service.ts` → línea con `apiUrl`
-- `src/app/core/services/post.service.ts` → línea con `apiUrl`
+- `src/environments/environment.development.ts` → propiedad `apiHost` (la que usa `ng serve`)
+- `src/environments/environment.ts` → la que usa el build de producción
+
+Todos los services y componentes leen de ahí; no hay URLs hardcodeadas repartidas por el código.
 
 ### e. Correr
 
@@ -182,4 +195,7 @@ Abre `http://localhost:4200`:
 → Estás en la carpeta incorrecta. `cd` al directorio que contiene `ConnectHub.API.csproj`.
 
 **El frontend no llama al backend**
-→ Revisa que el puerto en los services Angular coincida con el HTTPS de `dotnet run`. Acepta el certificado autofirmado abriendo el URL del API directamente en el navegador la primera vez.
+→ Revisa que `apiHost` en `src/environments/environment.development.ts` coincida con el HTTPS de `dotnet run`. Acepta el certificado autofirmado abriendo el URL del API directamente en el navegador la primera vez.
+
+**"Jwt:Key no configurado" al arrancar el backend**
+→ Falta el paso de User Secrets: `dotnet user-secrets set "Jwt:Key" "<clave de 32+ caracteres>"` desde `backend/ConnectHub.API/`.

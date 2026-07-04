@@ -85,6 +85,7 @@ Requisitos previos: SDK de .NET 8, Node.js 20+, SQL Server (Express sirve). Ver 
 ```bash
 # Backend
 cd backend/ConnectHub.API
+dotnet user-secrets set "Jwt:Key" "una-clave-secreta-de-al-menos-32-caracteres"  # solo la primera vez
 dotnet ef database update
 dotnet run
 # API en https://localhost:7088  (Swagger en /swagger)
