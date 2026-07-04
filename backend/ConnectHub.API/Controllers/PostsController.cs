@@ -189,7 +189,18 @@ public class PostsController : ControllerBase
         if (alreadyLiked) return BadRequest(new { message = "Ya diste like a este post" });
 
         _db.Likes.Add(new Like { PostId = id, UserId = userId });
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Dos clicks simultáneos pueden pasar ambos el AnyAsync de arriba
+            // (check-then-insert no es atómico). El índice único (PostId, UserId)
+            // rechaza el segundo insert; lo traducimos al mismo 400 del chequeo
+            // previo en vez de dejar escapar un 500.
+            return BadRequest(new { message = "Ya diste like a este post" });
+        }
 
         await _notifications.CreateAsync(ownerId.Value, userId, NotificationType.Like, id);
 
@@ -342,23 +353,41 @@ public class PostsController : ControllerBase
 
         if (names.Count == 0) return;
 
-        var existing = await _db.Hashtags.Where(h => names.Contains(h.Name)).ToListAsync();
-        var existingNames = existing.Select(h => h.Name).ToHashSet();
-
-        var toCreate = names
-            .Where(n => !existingNames.Contains(n))
-            .Select(n => new Hashtag { Name = n })
-            .ToList();
-
-        if (toCreate.Count > 0)
+        // Hasta 2 intentos: si otra petición crea el mismo hashtag entre nuestra
+        // consulta y el insert, el índice único de Hashtag.Name rechaza el insert
+        // (DbUpdateException). Reintentamos releyendo, y esta vez el hashtag ya
+        // existirá, así que solo se crean los vínculos.
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            _db.Hashtags.AddRange(toCreate);
+            var existing = await _db.Hashtags.Where(h => names.Contains(h.Name)).ToListAsync();
+            var existingNames = existing.Select(h => h.Name).ToHashSet();
+
+            var toCreate = names
+                .Where(n => !existingNames.Contains(n))
+                .Select(n => new Hashtag { Name = n })
+                .ToList();
+
+            if (toCreate.Count > 0)
+            {
+                _db.Hashtags.AddRange(toCreate);
+                try
+                {
+                    await _db.SaveChangesAsync();
+                }
+                catch (DbUpdateException) when (attempt == 0)
+                {
+                    // Desmarcamos los que intentamos insertar (SaveChanges es atómico:
+                    // no se guardó ninguno) y volvemos a empezar leyendo de la BD.
+                    foreach (var h in toCreate) _db.Entry(h).State = EntityState.Detached;
+                    continue;
+                }
+            }
+
+            foreach (var hashtag in existing.Concat(toCreate))
+                _db.PostHashtags.Add(new PostHashtag { PostId = post.Id, HashtagId = hashtag.Id });
+
             await _db.SaveChangesAsync();
+            return;
         }
-
-        foreach (var hashtag in existing.Concat(toCreate))
-            _db.PostHashtags.Add(new PostHashtag { PostId = post.Id, HashtagId = hashtag.Id });
-
-        await _db.SaveChangesAsync();
     }
 }

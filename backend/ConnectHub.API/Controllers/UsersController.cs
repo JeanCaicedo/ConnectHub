@@ -95,7 +95,17 @@ public class UsersController : ControllerBase
         if (already) return BadRequest(new { message = "Ya sigues a este usuario" });
 
         _db.Follows.Add(new Follow { FollowerId = userId, FollowedId = id });
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Misma race que en el like: dos peticiones simultáneas pasan el
+            // AnyAsync y la PK compuesta (FollowerId, FollowedId) rechaza la
+            // segunda. La traducimos a 400 en vez de dejar escapar un 500.
+            return BadRequest(new { message = "Ya sigues a este usuario" });
+        }
 
         await _notifications.CreateAsync(id, userId, NotificationType.Follow, null);
 
