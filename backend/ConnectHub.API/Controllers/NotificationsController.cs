@@ -1,10 +1,9 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
+using ConnectHub.API.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -24,7 +23,7 @@ public class NotificationsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<NotificationDto>>> GetMine()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var notifications = await _db.Notifications
             .Where(n => n.UserId == userId)
@@ -50,7 +49,7 @@ public class NotificationsController : ControllerBase
     [HttpGet("unread-count")]
     public async Task<ActionResult<int>> UnreadCount()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var count = await _db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
         return Ok(count);
     }
@@ -59,7 +58,7 @@ public class NotificationsController : ControllerBase
     [HttpPost("{id}/read")]
     public async Task<IActionResult> MarkRead(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var notification = await _db.Notifications
             .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
         if (notification is null) return NotFound();
@@ -73,17 +72,10 @@ public class NotificationsController : ControllerBase
     [HttpPost("read-all")]
     public async Task<IActionResult> MarkAllRead()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         await _db.Notifications
             .Where(n => n.UserId == userId && !n.IsRead)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
         return NoContent();
-    }
-
-    private int GetUserId()
-    {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
     }
 }

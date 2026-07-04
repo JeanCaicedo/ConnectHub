@@ -1,10 +1,9 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
+using ConnectHub.API.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -25,7 +24,7 @@ public class StatsController : ControllerBase
     [HttpGet("posts-per-day")]
     public async Task<ActionResult<IEnumerable<DailyCountDto>>> PostsPerDay()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var since = DateTime.UtcNow.Date.AddDays(-(Days - 1));
 
         // GroupBy por fecha: EF lo traduce a CAST(CreatedAt AS date) + GROUP BY.
@@ -42,7 +41,7 @@ public class StatsController : ControllerBase
     [HttpGet("likes-received")]
     public async Task<ActionResult<IEnumerable<DailyCountDto>>> LikesReceived()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var since = DateTime.UtcNow.Date.AddDays(-(Days - 1));
 
         var raw = await _db.Likes
@@ -58,7 +57,7 @@ public class StatsController : ControllerBase
     [HttpGet("followers-growth")]
     public async Task<ActionResult<IEnumerable<DailyCountDto>>> FollowersGrowth()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var since = DateTime.UtcNow.Date.AddDays(-(Days - 1));
 
         // Seguidores que ya tenía antes de la ventana (línea base).
@@ -89,7 +88,7 @@ public class StatsController : ControllerBase
     [HttpGet("top-posts")]
     public async Task<ActionResult<IEnumerable<TopPostDto>>> TopPosts()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var top = await _db.Posts
             .Where(p => p.UserId == userId)
@@ -111,7 +110,7 @@ public class StatsController : ControllerBase
     [HttpGet("engagement-rate")]
     public async Task<ActionResult<EngagementDto>> EngagementRate()
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var postsCount = await _db.Posts.CountAsync(p => p.UserId == userId);
         var likesReceived = await _db.Likes.CountAsync(l => l.Post.UserId == userId);
@@ -142,12 +141,5 @@ public class StatsController : ControllerBase
             result.Add(new DailyCountDto { Date = day, Count = map.GetValueOrDefault(day, 0) });
         }
         return result;
-    }
-
-    private int GetUserId()
-    {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
     }
 }

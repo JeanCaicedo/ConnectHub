@@ -1,12 +1,11 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
+using ConnectHub.API.Helpers;
 using ConnectHub.API.Models;
 using ConnectHub.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -29,7 +28,7 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<UserProfileDto>> GetProfile(int id)
     {
-        var currentUserId = GetCurrentUserIdOrZero();
+        var currentUserId = User.GetUserIdOrZero();
 
         var profile = await _db.Users
             .Where(u => u.Id == id)
@@ -56,7 +55,7 @@ public class UsersController : ControllerBase
     [HttpGet("{id}/posts")]
     public async Task<ActionResult<IEnumerable<PostDto>>> GetUserPosts(int id)
     {
-        var currentUserId = GetCurrentUserIdOrZero();
+        var currentUserId = User.GetUserIdOrZero();
 
         var posts = await _db.Posts
             .Where(p => p.UserId == id)
@@ -84,7 +83,7 @@ public class UsersController : ControllerBase
     [HttpPost("{id}/follow")]
     public async Task<IActionResult> Follow(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         if (userId == id)
             return BadRequest(new { message = "No puedes seguirte a ti mismo" });
@@ -109,7 +108,7 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}/follow")]
     public async Task<IActionResult> Unfollow(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var follow = await _db.Follows.FirstOrDefaultAsync(f => f.FollowerId == userId && f.FollowedId == id);
         if (follow is null) return NotFound(new { message = "No sigues a este usuario" });
@@ -126,7 +125,7 @@ public class UsersController : ControllerBase
     [HttpPut("me")]
     public async Task<ActionResult<UserProfileDto>> UpdateMe(UpdateProfileDto dto)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var user = await _db.Users.FindAsync(userId);
         if (user is null) return NotFound();
 
@@ -141,7 +140,7 @@ public class UsersController : ControllerBase
     [HttpPost("me/avatar")]
     public async Task<IActionResult> UploadAvatar(IFormFile file)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var user = await _db.Users.FindAsync(userId);
         if (user is null) return NotFound();
 
@@ -156,17 +155,5 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-    }
-
-    private int GetUserId()
-    {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
-    }
-
-    private int GetCurrentUserIdOrZero()
-    {
-        return User.Identity?.IsAuthenticated == true ? GetUserId() : 0;
     }
 }

@@ -1,9 +1,8 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
+using ConnectHub.API.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -23,7 +22,7 @@ public class CommentsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         // Include(Replies): necesitamos las respuestas cargadas para poder borrarlas,
         // porque la auto-referencia está configurada como Restrict (no cascada).
@@ -42,12 +41,5 @@ public class CommentsController : ControllerBase
         _db.Comments.Remove(comment);
         await _db.SaveChangesAsync();
         return NoContent();
-    }
-
-    private int GetUserId()
-    {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
     }
 }

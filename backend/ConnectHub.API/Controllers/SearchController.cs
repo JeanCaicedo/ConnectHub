@@ -1,9 +1,8 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
+using ConnectHub.API.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -26,7 +25,7 @@ public class SearchController : ControllerBase
         if (string.IsNullOrWhiteSpace(q))
             return Ok(new SearchResultDto());
 
-        var currentUserId = GetCurrentUserIdOrZero();
+        var currentUserId = User.GetUserIdOrZero();
         var term = q.Trim();
         var isHashtag = term.StartsWith('#');
         var tag = (isHashtag ? term[1..] : term).ToLower();
@@ -71,13 +70,5 @@ public class SearchController : ControllerBase
                 .ToListAsync();
 
         return Ok(new SearchResultDto { Posts = posts, Users = users });
-    }
-
-    private int GetCurrentUserIdOrZero()
-    {
-        if (User.Identity?.IsAuthenticated != true) return 0;
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
     }
 }

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using ConnectHub.API.Data;
 using ConnectHub.API.DTOs;
 using ConnectHub.API.Helpers;
@@ -7,7 +6,6 @@ using ConnectHub.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace ConnectHub.API.Controllers;
 
@@ -32,7 +30,7 @@ public class PostsController : ControllerBase
     {
         // Si hay alguien logueado, lo usamos para marcar IsLikedByCurrentUser.
         // Si no (endpoint público), queda en 0 y nunca coincide con un UserId real.
-        var currentUserId = GetCurrentUserIdOrZero();
+        var currentUserId = User.GetUserIdOrZero();
 
         return Ok(await PagePosts(_db.Posts, page, pageSize, currentUserId));
     }
@@ -44,7 +42,9 @@ public class PostsController : ControllerBase
     [HttpGet("feed")]
     public async Task<ActionResult<PagedResult<PostDto>>> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var userId = GetUserId();
+        // Patrón: si el claim 'sub' falta o no es numérico, 401 en vez de
+        // reventar con excepción (500). GetUserId() devuelve int? (ver Helpers).
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         // IDs de los usuarios que sigo. Lo dejamos como IQueryable (subconsulta)
         // para que el filtro se traduzca a un solo SQL con un IN (...).
@@ -97,7 +97,7 @@ public class PostsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PostDto>> GetById(int id)
     {
-        var currentUserId = GetCurrentUserIdOrZero();
+        var currentUserId = User.GetUserIdOrZero();
 
         var post = await _db.Posts
             .Where(p => p.Id == id)
@@ -125,7 +125,7 @@ public class PostsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PostDto>> Create(CreatePostDto dto)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var post = new Post
         {
@@ -162,7 +162,7 @@ public class PostsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
         var post = await _db.Posts.FindAsync(id);
 
         if (post is null) return NotFound();
@@ -178,7 +178,7 @@ public class PostsController : ControllerBase
     [HttpPost("{id}/like")]
     public async Task<IActionResult> Like(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         // Traemos el dueño del post (para notificarle) y de paso validamos que existe.
         var ownerId = await _db.Posts.Where(p => p.Id == id)
@@ -202,7 +202,7 @@ public class PostsController : ControllerBase
     [HttpDelete("{id}/like")]
     public async Task<IActionResult> Unlike(int id)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var like = await _db.Likes.FirstOrDefaultAsync(l => l.PostId == id && l.UserId == userId);
         if (like is null) return NotFound(new { message = "No habías dado like a este post" });
@@ -276,7 +276,7 @@ public class PostsController : ControllerBase
     [HttpPost("{id}/comments")]
     public async Task<ActionResult<CommentDto>> AddComment(int id, CreateCommentDto dto)
     {
-        var userId = GetUserId();
+        if (User.GetUserId() is not { } userId) return Unauthorized();
 
         var ownerId = await _db.Posts.Where(p => p.Id == id)
             .Select(p => (int?)p.UserId).FirstOrDefaultAsync();
@@ -360,19 +360,5 @@ public class PostsController : ControllerBase
             _db.PostHashtags.Add(new PostHashtag { PostId = post.Id, HashtagId = hashtag.Id });
 
         await _db.SaveChangesAsync();
-    }
-
-    private int GetUserId()
-    {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return int.Parse(sub!);
-    }
-
-    // Igual que GetUserId pero tolera peticiones anónimas (endpoints públicos):
-    // devuelve 0 si nadie está autenticado, valor que nunca coincide con un Id real.
-    private int GetCurrentUserIdOrZero()
-    {
-        return User.Identity?.IsAuthenticated == true ? GetUserId() : 0;
     }
 }
