@@ -18,8 +18,9 @@ public class JwtHelper
     public string GenerateToken(User user)
     {
         var jwtSettings = _config.GetSection("Jwt");
-        var keyString = jwtSettings["Key"]
-            ?? throw new InvalidOperationException("Jwt:Key no configurado");
+        var keyString = jwtSettings["Key"];
+        if (string.IsNullOrWhiteSpace(keyString))
+            throw new InvalidOperationException("Jwt:Key no configurado (ver User Secrets / variable de entorno Jwt__Key)");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

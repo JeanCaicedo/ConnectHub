@@ -54,9 +54,15 @@ builder.Services.AddScoped<ConnectHub.API.Services.FileStorageService>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<ConnectHub.API.Services.NotificationService>();
 
-// Autenticación JWT
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key no configurado");
+// Autenticación JWT.
+// La clave NO vive en appsettings.json (estaría commiteada en git). En desarrollo
+// viene de User Secrets; en producción, de la variable de entorno Jwt__Key.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException(
+        "Jwt:Key no configurado. En desarrollo ejecuta: " +
+        "dotnet user-secrets set \"Jwt:Key\" \"<clave-de-al-menos-32-caracteres>\" " +
+        "(desde backend/ConnectHub.API). En producción usa la variable de entorno Jwt__Key.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
