@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { FollowResponse, Post, UserProfile } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://localhost:7088/api/users';
+  private apiUrl = `${environment.apiHost}/api/users`;
 
   getProfile(id: number): Observable<UserProfile> {
     return this.http.get<UserProfile>(`${this.apiUrl}/${id}`);

@@ -1,12 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthResponse, LoginRequest, RegisterRequest } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://localhost:7088/api/auth';
+  private apiUrl = `${environment.apiHost}/api/auth`;
 
   // Signal con el usuario actual (Angular 18 moderno)
   currentUser = signal<AuthResponse | null>(this.loadFromStorage());

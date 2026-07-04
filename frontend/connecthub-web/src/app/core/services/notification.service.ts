@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { Notification } from '../models/models';
 
@@ -8,8 +9,8 @@ import { Notification } from '../models/models';
 export class NotificationService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
-  private apiUrl = 'https://localhost:7088/api/notifications';
-  private hubUrl = 'https://localhost:7088/hubs/notifications';
+  private apiUrl = `${environment.apiHost}/api/notifications`;
+  private hubUrl = `${environment.apiHost}/hubs/notifications`;
 
   notifications = signal<Notification[]>([]);
   unreadCount = signal(0);

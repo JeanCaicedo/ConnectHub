@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { UserService } from '../../core/services/user.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Post, UserProfile } from '../../core/models/models';
@@ -166,7 +167,7 @@ export class ProfileComponent implements OnInit {
     this.posts.update(curr => curr.filter(p => p.id !== id));
   }
 
-  private apiHost = 'https://localhost:7088';
+  private apiHost = environment.apiHost;
   imageSrc(url: string): string {
     return url.startsWith('http') ? url : `${this.apiHost}${url}`;
   }

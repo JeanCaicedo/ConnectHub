@@ -1,6 +1,7 @@
 import { Component, inject, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { environment } from '../../environments/environment';
 import { PostService } from '../core/services/post.service';
 import { AuthService } from '../core/services/auth.service';
 import { Post } from '../core/models/models';
@@ -84,7 +85,7 @@ export class PostCardComponent {
   showComments = signal(false);
 
   // Las imagenes se sirven desde el backend con ruta relativa (/uploads/...).
-  private apiHost = 'https://localhost:7088';
+  private apiHost = environment.apiHost;
   imageSrc(url: string): string {
     return url.startsWith('http') ? url : `${this.apiHost}${url}`;
   }
